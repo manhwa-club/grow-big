@@ -19,12 +19,15 @@ No backend is required.
 
 ### Option A: open directly
 
-Open `/home/runner/work/grow-big/grow-big/index.html` in a modern desktop browser.
+Open `index.html` from your local `grow-big` checkout in a modern desktop browser.
 
 ### Option B: local server (recommended)
 
 ```bash
-cd /home/runner/work/grow-big/grow-big
+# example (after cloning)
+cd grow-big
+# or use your local checkout path
+# cd /path/to/your/clone
 python -m http.server 8000
 ```
 

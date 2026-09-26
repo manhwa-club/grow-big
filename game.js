@@ -1,4 +1,7 @@
 const STORAGE_KEY = 'growBigPrototypeSave_v1';
+const RESOURCE_RESPAWN_MS = 18000;
+const COLLECTIBLE_INTERACT_RADIUS = 38;
+const COLLECTIBLE_RESPAWN_MAX_ATTEMPTS = 40;
 
 const WORLD = { width: 2200, height: 1400 };
 
@@ -59,7 +62,8 @@ const state = {
   status: { text: 'Welcome to Grow Big.', tone: 'ok' },
   promptText: 'Move with WASD / Arrow keys',
   worldTime: 0,
-  lastAutoSaveAt: 0
+  lastAutoSaveAt: 0,
+  isResetting: false
 };
 
 const refs = {
@@ -109,14 +113,38 @@ function randomPointInZone(zoneId, margin = 40) {
   };
 }
 
+function canPlaceCollectibleAt(x, y, interactionRadius = COLLECTIBLE_INTERACT_RADIUS) {
+  if (
+    x - interactionRadius < 0 ||
+    y - interactionRadius < 0 ||
+    x + interactionRadius > WORLD.width ||
+    y + interactionRadius > WORLD.height
+  ) {
+    return false;
+  }
+  return !OBSTACLES.some((obstacle) => circleRectCollision(x, y, interactionRadius, obstacle));
+}
+
+function collectibleSpawnPoint(zoneId, margin) {
+  let fallback = randomPointInZone(zoneId, margin);
+  for (let attempt = 0; attempt < COLLECTIBLE_RESPAWN_MAX_ATTEMPTS; attempt += 1) {
+    const point = randomPointInZone(zoneId, margin);
+    fallback = point;
+    if (canPlaceCollectibleAt(point.x, point.y)) {
+      return point;
+    }
+  }
+  return fallback;
+}
+
 function initCollectibles() {
   state.collectibles = [];
   for (let i = 0; i < 7; i += 1) {
-    const pos = randomPointInZone('cave', 70);
+    const pos = collectibleSpawnPoint('cave', 70);
     state.collectibles.push({ id: `crystal-${i}`, type: 'crystal', x: pos.x, y: pos.y, collected: false, respawnAt: 0 });
   }
   for (let i = 0; i < 6; i += 1) {
-    const pos = randomPointInZone('grove', 80);
+    const pos = collectibleSpawnPoint('grove', 80);
     state.collectibles.push({ id: `wood-${i}`, type: 'wood', x: pos.x, y: pos.y, collected: false, respawnAt: 0 });
   }
 }
@@ -157,6 +185,35 @@ function getCurrentZone() {
   return ZONES.find((zone) => insideRect(state.player, zone))?.id || 'wilds';
 }
 
+function readStoredGame() {
+  try {
+    return localStorage.getItem(STORAGE_KEY);
+  } catch {
+    setStatus('Storage read failed. Continuing without saved data.', 'warn');
+    return null;
+  }
+}
+
+function writeStoredGame(value) {
+  try {
+    localStorage.setItem(STORAGE_KEY, value);
+    return true;
+  } catch {
+    setStatus('Storage write failed. Progress will continue without autosave.', 'warn');
+    return false;
+  }
+}
+
+function removeStoredGame() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+    return true;
+  } catch {
+    setStatus('Could not clear saved progress from storage.', 'warn');
+    return false;
+  }
+}
+
 function saveGame() {
   const saveData = {
     player: state.player,
@@ -179,12 +236,13 @@ function saveGame() {
       respawnAt: item.respawnAt
     }))
   };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
-  state.lastAutoSaveAt = state.worldTime;
+  if (writeStoredGame(JSON.stringify(saveData))) {
+    state.lastAutoSaveAt = state.worldTime;
+  }
 }
 
 function loadGame() {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = readStoredGame();
   if (!raw) {
     initCollectibles();
     return;
@@ -203,23 +261,49 @@ function loadGame() {
     state.selectedDecor = data.selectedDecor || state.selectedDecor;
     state.placedDecor = { ...(data.placedDecor || {}) };
     state.quest = { ...state.quest, ...(data.quest || {}) };
-    state.collectibles = Array.isArray(data.collectibles) ? data.collectibles : [];
+    state.collectibles = Array.isArray(data.collectibles)
+      ? data.collectibles.map((item) => {
+        const itemType = item.type === 'wood' ? 'wood' : 'crystal';
+        const zone = itemType === 'crystal' ? 'cave' : 'grove';
+        const fallbackPoint = collectibleSpawnPoint(zone, zone === 'cave' ? 70 : 80);
+        const x = Number.isFinite(Number(item.x)) ? Number(item.x) : fallbackPoint.x;
+        const y = Number.isFinite(Number(item.y)) ? Number(item.y) : fallbackPoint.y;
+        const hasValidPosition = canPlaceCollectibleAt(x, y);
+        const itemRespawnAt = Number(item?.respawnAt) || 0;
+        const usesAbsoluteClock = itemRespawnAt > 1_000_000_000_000;
+        return {
+          id: item.id,
+          type: itemType,
+          x: hasValidPosition ? x : fallbackPoint.x,
+          y: hasValidPosition ? y : fallbackPoint.y,
+          collected: Boolean(item.collected),
+          respawnAt: Boolean(item.collected)
+            ? (usesAbsoluteClock ? itemRespawnAt : Date.now() + RESOURCE_RESPAWN_MS)
+            : 0
+        };
+      })
+      : [];
     if (!state.collectibles.length) {
       initCollectibles();
     }
   } catch {
+    setStatus('Saved data was invalid and has been reset.', 'warn');
     initCollectibles();
   }
 }
 
 function resetGame() {
-  localStorage.removeItem(STORAGE_KEY);
+  state.isResetting = true;
+  if (!removeStoredGame()) {
+    state.isResetting = false;
+    return;
+  }
   location.reload();
 }
 
 function handleCollect(item) {
   item.collected = true;
-  item.respawnAt = state.worldTime + 18;
+  item.respawnAt = Date.now() + RESOURCE_RESPAWN_MS;
   if (item.type === 'crystal') {
     state.resources.crystal += 1;
     state.coins += 12;
@@ -380,6 +464,14 @@ function handleButtons() {
 
 function setupInput() {
   window.addEventListener('keydown', (event) => {
+    const target = event.target;
+    const isInteractive =
+      target instanceof HTMLElement &&
+      (target.isContentEditable || Boolean(target.closest('input, textarea, select, button')));
+    if (isInteractive) {
+      return;
+    }
+
     const key = event.key.toLowerCase();
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", "shift"].includes(key)) {
       event.preventDefault();
@@ -396,7 +488,9 @@ function setupInput() {
   });
 
   window.addEventListener('beforeunload', () => {
-    saveGame();
+    if (!state.isResetting) {
+      saveGame();
+    }
   });
 }
 
@@ -425,9 +519,6 @@ function movePlayer(dt) {
 }
 
 function updateCamera() {
-  state.camera.w = refs.canvas.width;
-  state.camera.h = refs.canvas.height;
-
   state.camera.x = state.player.x - state.camera.w / 2;
   state.camera.y = state.player.y - state.camera.h / 2;
 
@@ -436,13 +527,15 @@ function updateCamera() {
 }
 
 function updateCollectibleRespawns() {
+  const now = Date.now();
   for (const item of state.collectibles) {
-    if (item.collected && state.worldTime >= item.respawnAt) {
+    if (item.collected && now >= item.respawnAt) {
       const zone = item.type === 'crystal' ? 'cave' : 'grove';
-      const nextPos = randomPointInZone(zone, 80);
+      const nextPos = collectibleSpawnPoint(zone, zone === 'cave' ? 70 : 80);
       item.x = nextPos.x;
       item.y = nextPos.y;
       item.collected = false;
+      item.respawnAt = 0;
     }
   }
 }
@@ -635,21 +728,23 @@ function resizeCanvas() {
 
 let previousTime = 0;
 function loop(timestamp) {
-  const dt = Math.min(0.033, (timestamp - previousTime) / 1000 || 0);
-  previousTime = timestamp;
-  state.worldTime += dt;
+  try {
+    const dt = Math.min(0.033, (timestamp - previousTime) / 1000 || 0);
+    previousTime = timestamp;
+    state.worldTime += dt;
 
-  movePlayer(dt);
-  updateCollectibleRespawns();
-  updateCamera();
-  updatePrompt();
-  drawWorld();
+    movePlayer(dt);
+    updateCollectibleRespawns();
+    updateCamera();
+    updatePrompt();
+    drawWorld();
 
-  if (state.worldTime - state.lastAutoSaveAt > 12) {
-    saveGame();
+    if (state.worldTime - state.lastAutoSaveAt > 12) {
+      saveGame();
+    }
+  } finally {
+    requestAnimationFrame(loop);
   }
-
-  requestAnimationFrame(loop);
 }
 
 function boot() {
