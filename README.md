@@ -1,42 +1,50 @@
 # Grow Big
 
-A playful mobile-first creature home builder prototype.
+A ready-to-play browser vertical slice of **Grow Big** with exploration, quests, home customization, and local progression.
 
-## What is in this version
+## Prototype features
 
-- A cozy home room with build mode
-- Furniture placement and simple customization
-- A creature companion named Mochi
-- Daily quests with coin rewards
-- A coin, level, and XP loop
-- A shop for buying home items
+- Keyboard movement (WASD / Arrow keys) with world boundaries, collision, and a follow camera.
+- Distinct areas: **Home Base**, **Sun Meadow**, **Crystal Cave**, and **Timber Grove**.
+- NPC quest loop: accept quest, track objective progress, return for rewards.
+- Collectibles and economy: crystals/wood resources, coins, XP, level-ups.
+- Progression unlock: level-gated sprint upgrade purchase.
+- Home customization: place owned decor on home pads; quest rewards and shop expand decor options.
+- Persistent progress in `localStorage` (player state, quest state, inventory, placed decor, collectibles).
+- HUD + menus for quest state, hints, resources, XP/level, save and reset behavior.
 
-## How to run it
+## Run from a clean checkout
 
-Open `index.html` in a browser, or run a simple local server:
+No backend is required.
+
+### Option A: open directly
+
+Open `index.html` from your local `grow-big` checkout in a modern desktop browser.
+
+### Option B: local server (recommended)
 
 ```bash
+# example (after cloning)
 cd grow-big
+# or use your local checkout path
+# cd /path/to/your/clone
 python -m http.server 8000
 ```
 
-Then visit:
+Then open: `http://localhost:8000`
 
-http://localhost:8000
+## Controls
 
-## Game loop
+- **Move:** `WASD` or `Arrow Keys`
+- **Interact / collect / talk / place decor:** `E`
+- **Sprint (after buying sprint upgrade):** Hold `Shift`
+- **Save:** `Save` button
+- **Reset all progress:** `Reset` button
 
-- Explore the world to earn coins
-- Complete quests for bigger payouts
-- Buy furniture and decorate your room
-- Keep your pet happy and your home growing
-- Turn your tiny room into a bigger creature business
+## Gameplay loop
 
-## Future upgrades
-
-- More outdoor areas and map travel
-- More creatures and evolution stages
-- Save/load progress with localStorage
-- 3D style visuals and richer animations
-- Multiplayer and friend visits
-- More advanced building tools and room expansion
+1. Talk to the **Meadow Guide** to accept the crystal quest.
+2. Explore and collect resources (especially crystals in Crystal Cave).
+3. Return to the NPC to complete the quest for coin/XP rewards and decor unlock.
+4. Buy upgrades/decor, return to Home Base, and place decor near glowing home pads.
+5. Keep collecting, leveling, and improving your base.
