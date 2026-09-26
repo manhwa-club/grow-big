@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Grow Big</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-wrap">
+          <div class="brand-mark">G</div>
+          <div>
+            <div class="eyebrow">Creature home</div>
+            <h1>Grow Big</h1>
+          </div>
+        </div>
+
+        <div class="top-stats">
+          <div class="stat-pill">
+            <span class="label">Coins</span>
+            <strong id="coinCount">0</strong>
+          </div>
+          <div class="stat-pill">
+            <span class="label">Level</span>
+            <strong id="levelCount">1</strong>
+          </div>
+        </div>
+      </header>
+
+      <main class="game-layout">
+        <section class="left-panel panel-card">
+          <div class="panel-header">
+            <h2>Home</h2>
+            <button id="toggleBuildMode" class="action-btn primary">Build</button>
+          </div>
+
+          <div class="room-panel">
+            <div id="homeRoom" class="home-room" aria-label="Home room"></div>
+          </div>
+
+          <div class="pet-panel">
+            <div class="pet-header">
+              <div>
+                <small>Companion</small>
+                <h3 id="petName">Mochi</h3>
+              </div>
+              <div class="pet-mood" id="petMood">Happy</div>
+            </div>
+            <div id="petAvatar" class="pet-avatar" aria-label="Pet avatar">🐣</div>
+            <div class="pet-actions">
+              <button id="petButton" class="action-btn">Play</button>
+              <button id="collectButton" class="action-btn secondary">Collect</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="center-panel panel-card">
+          <div class="panel-header">
+            <h2>Adventure</h2>
+          </div>
+
+          <div class="quest-card">
+            <div class="quest-badge">Quest</div>
+            <h3 id="questTitle">Find the lost Moon Pup</h3>
+            <p id="questText">Explore the meadow and rescue the tiny creature hiding behind the glowing flowers.</p>
+            <div class="quest-meta">
+              <span id="questReward">+120 coins</span>
+              <span id="questProgress">0/1</span>
+            </div>
+            <button id="completeQuest" class="action-btn primary wide">Complete quest</button>
+          </div>
+
+          <div class="mini-actions">
+            <button id="exploreButton" class="action-btn">Explore</button>
+            <button id="restButton" class="action-btn secondary">Rest</button>
+            <button id="shopButton" class="action-btn neutral">Shop</button>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-box">
+              <small>Home size</small>
+              <strong id="homeSizeText">1 room</strong>
+            </div>
+            <div class="info-box">
+              <small>Business</small>
+              <strong id="businessText">Cozy corner</strong>
+            </div>
+            <div class="info-box">
+              <small>Visitors</small>
+              <strong id="visitorText">2 today</strong>
+            </div>
+            <div class="info-box">
+              <small>XP</small>
+              <strong id="xpText">0 / 200</strong>
+            </div>
+          </div>
+        </section>
+
+        <aside class="right-panel panel-card">
+          <div class="panel-header">
+            <h2>Shop</h2>
+          </div>
+
+          <div id="shopList" class="shop-list"></div>
+        </aside>
+      </main>
+    </div>
+
+    <script src="game.js"></script>
+  </body>
+</html>
